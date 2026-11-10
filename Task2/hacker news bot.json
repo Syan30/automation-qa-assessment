@@ -1,0 +1,190 @@
+{
+  "name": "hacker news bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        112
+      ],
+      "id": "67ca7be4-0c9e-4e7d-a4fd-d127c4d21244",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hacker-news.firebaseio.com/v0/topstories.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        112
+      ],
+      "id": "c89d35af-b496-4f4e-be56-833d48b3f95f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.slice(0, 5).map(item => ({\n  json: {\n    storyId: item.json\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        112
+      ],
+      "id": "11e4b571-e93b-4fb2-9579-1460362975dc",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=https://hacker-news.firebaseio.com/v0/item/{{ $json.storyId }}.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        112
+      ],
+      "id": "8d3ed92d-11d8-4ae6-b0aa-06c780184db0",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst stories = $input.all().map(item => item.json);\n\nconst validStories = stories\n  .filter(story => story && story.title && story.url)\n  .map(story => ({\n    title: story.title,\n    url: story.url,\n    author: story.by,\n    score: story.score || 0,\n    publishedAt: new Date(story.time * 1000).toISOString()\n  }));\n\nvalidStories.sort((a, b) => b.score - a.score);\n\nreturn validStories.map(story => ({\n  json: story\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        112
+      ],
+      "id": "cdc0f45f-2f1a-4732-a725-956a1efe23f2",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst stories = $input.all().map(item => item.json);\n\nconst filtered = stories.filter(story => story.score > 100);\n\nconst message = filtered.map((story, index) =>\n  `🔥 ${index + 1}. ${story.title}\\n` +\n  `Score: ${story.score}\\n` +\n  `Author: ${story.author}\\n` +\n  `URL: ${story.url}`\n).join('\\n\\n');\n\nreturn [{\n  json: {\n    content: `Hacker News Top Stories\\n\\n${message}`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "747e9f3f-d9ea-4861-8573-08077aeca06d",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1569755897331191999/VrK9x61sWJQZJ9Y98tutBpjItNAn3wZopRkx_Y15u70rat5K98LUW7hzCLO-VCl00Do_",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"content\": $json.content } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1328,
+        112
+      ],
+      "id": "87b116b6-d9f5-4558-a91b-46c45e5951a9",
+      "name": "HTTP Request2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8f5d6f4b-1f9a-4e82-9c00-c407c0d1a610",
+  "meta": {
+    "instanceId": "55b9e30911350674af43a4a5aefacd219c173aed35f9d44b9836ed34d6e25c39"
+  },
+  "nodeGroups": [],
+  "id": "JIJ2m3kV0Gr3HAui",
+  "tags": []
+}
